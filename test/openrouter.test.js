@@ -1,6 +1,12 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { createOpenRouterClient, getPrices, parseCategory, recommendModel } = require("../src/openrouter");
+const {
+  DECISION_MODEL_IDS,
+  createOpenRouterClient,
+  getPrices,
+  parseCategory,
+  recommendModel,
+} = require("../src/openrouter");
 
 test("parses a category case-insensitively and strips surrounding quotes", () => {
   assert.equal(parseCategory('"pricing inquiry"', ["Pricing inquiry", "Support"]), "Pricing inquiry");
@@ -36,7 +42,7 @@ test("uses the selected live-catalog model and keeps the API key server-side", a
       if (url.endsWith("/models")) {
         return new Response(JSON.stringify({
           data: [{
-            id: "provider/model",
+            id: "inception/mercury-decide:free",
             context_length: 32000,
             pricing: { prompt: "0.000001", completion: "0.000002" },
             architecture: { input_modalities: ["text"] },
@@ -50,14 +56,36 @@ test("uses the selected live-catalog model and keeps the API key server-side", a
     },
   });
 
-  const result = await client.classify({ message: "How much?", model: "provider/model" });
+  const result = await client.classify({ message: "How much?", model: "inception/mercury-decide:free" });
   assert.equal(result.category, "Pricing inquiry");
-  assert.equal(result.model, "provider/model");
+  assert.equal(result.model, "inception/mercury-decide:free");
   assert.ok(Math.abs(result.usage.estimatedCost - 0.000024) < 1e-12);
   assert.equal(calls[0].options.headers.Authorization, "Bearer test-secret");
   assert.equal(calls[1].options.headers.Authorization, "Bearer test-secret");
   assert.equal(JSON.stringify(result).includes("test-secret"), false);
-  assert.equal(JSON.parse(calls[1].options.body).model, "provider/model");
+  assert.equal(JSON.parse(calls[1].options.body).model, "inception/mercury-decide:free");
+});
+
+test("fetches only report-listed decision models from the authenticated catalog", async () => {
+  let requestedAuthorization;
+  const client = createOpenRouterClient({
+    apiKey: "test-secret",
+    fetchImpl: async (_url, options) => {
+      requestedAuthorization = options.headers.Authorization;
+      return new Response(JSON.stringify({
+        data: [
+          { id: "inception/mercury-decide:free", architecture: { input_modalities: ["text"], output_modalities: ["text"] } },
+          { id: "general-purpose/model", architecture: { input_modalities: ["text"], output_modalities: ["text"] } },
+          { id: "cloudflare/clef", architecture: { input_modalities: ["image"], output_modalities: ["text"] } },
+        ],
+      }), { status: 200, headers: { "Content-Type": "application/json" } });
+    },
+  });
+
+  const models = await client.listModels();
+  assert.deepEqual(models.map((model) => model.id), ["inception/mercury-decide:free"]);
+  assert.equal(requestedAuthorization, "Bearer test-secret");
+  assert.ok(DECISION_MODEL_IDS.has("cloudflare/clef-flash"));
 });
 
 test("requires a server-side API key before making a classification request", async () => {
@@ -71,6 +99,11 @@ test("requires a server-side API key before making a classification request", as
   });
   await assert.rejects(
     client.classify({ message: "A message", model: "provider/model" }),
+    (error) => error.status === 503 && /OPENROUTER_API_KEY/.test(error.message),
+  );
+  assert.equal(fetchCalled, false);
+  await assert.rejects(
+    client.listModels(),
     (error) => error.status === 503 && /OPENROUTER_API_KEY/.test(error.message),
   );
   assert.equal(fetchCalled, false);

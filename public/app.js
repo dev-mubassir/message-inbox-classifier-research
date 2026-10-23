@@ -102,10 +102,18 @@ function renderModelOptions() {
   if (filtered.length === 0) {
     const option = document.createElement("option");
     option.value = "";
-    option.textContent = "No matching models";
+    option.textContent = !state.apiKeyConfigured
+      ? "OpenRouter API key required"
+      : state.models.length === 0
+        ? "No report-listed decision models are available"
+        : "No matching models";
     elements.modelSelect.append(option);
     renderModelDetails();
-    elements.recommendationNote.textContent = "No models matched your search. Try a provider name or model ID.";
+    elements.recommendationNote.textContent = !state.apiKeyConfigured
+      ? "Add your OpenRouter API key to fetch the report-listed decision models."
+      : state.models.length === 0
+        ? "No exact models from the comparison report are currently available in this OpenRouter catalog. General models are intentionally hidden."
+        : "No models matched your search. Try a provider name or model ID.";
     return;
   }
 
@@ -131,24 +139,28 @@ async function loadSetup() {
   elements.refreshModels.disabled = true;
   elements.modelSelect.disabled = true;
   try {
-    const [config, catalog] = await Promise.all([
-      fetchJson("/api/config"),
-      fetchJson("/api/models"),
-    ]);
+    const config = await fetchJson("/api/config");
     state.apiKeyConfigured = config.apiKeyConfigured;
     state.categories = config.categories;
+    renderFolders();
+    if (!state.apiKeyConfigured) {
+      state.models = [];
+      state.recommendedModelId = "";
+      renderModelOptions();
+      setConnection(false, "API key needed", "Add a key in your local .env file");
+      elements.apiNotice.textContent = "To fetch decision models and classify messages, create a local .env file from .env.example, add your OpenRouter API key, then restart the app. The key stays on the server.";
+      elements.apiNotice.hidden = false;
+      elements.modelError.hidden = true;
+      return;
+    }
+
+    const catalog = await fetchJson("/api/models");
     state.models = catalog.models;
     state.recommendedModelId = catalog.recommendedModelId;
     renderFolders();
     renderModelOptions();
-    if (state.apiKeyConfigured) {
-      setConnection(true, "API key ready", "Key stays on this computer");
-      elements.apiNotice.hidden = true;
-    } else {
-      setConnection(false, "API key needed", "Add a key in your local .env file");
-      elements.apiNotice.textContent = "To classify, create a local .env file from .env.example, add your OpenRouter API key, then restart the app. The key is used by this server and is never sent to the browser.";
-      elements.apiNotice.hidden = false;
-    }
+    setConnection(true, "API key ready", "Key stays on this computer");
+    elements.apiNotice.hidden = true;
     elements.modelError.hidden = true;
   } catch (error) {
     elements.modelError.textContent = error.message;
@@ -156,7 +168,7 @@ async function loadSetup() {
     setConnection(false, "Catalog unavailable", "Check your connection and refresh");
   } finally {
     elements.refreshModels.disabled = false;
-    elements.modelSelect.disabled = state.models.length === 0;
+    elements.modelSelect.disabled = !state.apiKeyConfigured || state.models.length === 0;
   }
 }
 

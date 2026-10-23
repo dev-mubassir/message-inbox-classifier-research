@@ -11,6 +11,19 @@ const CATEGORY_DEFINITIONS = [
   ["Spam and scams", "Unsolicited spam, phishing, fraud, suspicious links, or requests for passwords or verification codes."],
 ];
 
+const DECISION_MODEL_IDS = new Set([
+  "cloudflare/clef-flash",
+  "cloudflare/clef",
+  "together/tev1-4b-experimental",
+  "inception/mercury-decide:free",
+  "inception/mercury-decide",
+  "upstage/solar-decide",
+  "respan/span-01",
+  "respan/span-01-lite",
+  "jaredpalmer/kev-4b",
+  "typesafe/jev-1.13",
+]);
+
 const API_BASE = "https://openrouter.ai/api/v1";
 const CACHE_TTL_MS = 5 * 60 * 1000;
 const REQUEST_TIMEOUT_MS = 45_000;
@@ -111,6 +124,11 @@ function createOpenRouterClient({ apiKey, fetchImpl = fetch }) {
   }
 
   async function listModels() {
+    if (!apiKey) {
+      const error = new Error("Add OPENROUTER_API_KEY to your local .env file before fetching decision models.");
+      error.status = 503;
+      throw error;
+    }
     if (cachedModels && Date.now() - modelsFetchedAt < CACHE_TTL_MS) {
       return cachedModels;
     }
@@ -121,7 +139,7 @@ function createOpenRouterClient({ apiKey, fetchImpl = fetch }) {
     cachedModels = payload.data.filter((model) => {
       const modalities = model?.architecture?.input_modalities;
       const outputs = model?.architecture?.output_modalities;
-      return model?.id &&
+      return DECISION_MODEL_IDS.has(model.id) &&
         (!Array.isArray(modalities) || modalities.includes("text")) &&
         (!Array.isArray(outputs) || outputs.includes("text"));
     });
@@ -202,4 +220,11 @@ function createOpenRouterClient({ apiKey, fetchImpl = fetch }) {
   };
 }
 
-module.exports = { CATEGORY_DEFINITIONS, createOpenRouterClient, getPrices, parseCategory, recommendModel };
+module.exports = {
+  CATEGORY_DEFINITIONS,
+  DECISION_MODEL_IDS,
+  createOpenRouterClient,
+  getPrices,
+  parseCategory,
+  recommendModel,
+};

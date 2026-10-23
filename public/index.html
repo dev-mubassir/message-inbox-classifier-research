@@ -3,8 +3,8 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="theme-color" content="#f6f7f9">
-    <meta name="description" content="Classify and organize messages with switchable OpenRouter AI models.">
+    <meta name="theme-color" content="#000000">
+    <meta name="description" content="Classify and organize messages with switchable OpenRouter decision models.">
     <title>Inbox research · Message classifier</title>
     <link rel="stylesheet" href="/styles.css">
     <script src="/app.js" defer></script>
@@ -41,13 +41,13 @@
 
         <section class="panel model-panel" aria-labelledby="modelHeading">
           <div class="panel-heading">
-            <div><div class="eyebrow">MODEL CONTROL</div><h2 id="modelHeading">Choose an AI model</h2></div>
+            <div><div class="eyebrow">MODEL CONTROL</div><h2 id="modelHeading">Choose a decision model</h2></div>
             <button class="button button-subtle" id="refreshModels" type="button">Refresh catalog</button>
           </div>
           <div class="model-controls">
-            <label class="model-search-label" for="modelSearch">Search OpenRouter models</label>
+            <label class="model-search-label" for="modelSearch">Search report-listed decision models</label>
             <input id="modelSearch" type="search" placeholder="Search by model or provider…" autocomplete="off">
-            <label class="model-select-label" for="modelSelect">Available model</label>
+            <label class="model-select-label" for="modelSelect">Available decision model</label>
             <select id="modelSelect" aria-describedby="recommendationNote">
               <option value="">Loading model catalog…</option>
             </select>

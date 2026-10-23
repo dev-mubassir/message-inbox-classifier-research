@@ -12,12 +12,16 @@ generates PDF exports.
 
 ## Features
 
-- Switch between models in the live OpenRouter catalog without changing code.
-- Search models by provider or name and inspect context size and published
-  input/output prices before selecting one.
+- Fetch the live OpenRouter model catalog using your server-side API key, then
+  show only the decision-model IDs in the comparison report that are currently
+  present in that catalog.
+- Search available decision models by provider or name and inspect context
+  size and published input/output prices before selecting one.
 - Get a **recommended value pick** based on the catalog's listed token prices
   and context size. This price/context heuristic does not claim the model is
   the most accurate.
+- Use a pure-black dark interface throughout the sidebar, model picker,
+  message composer, and results.
 - Classify messages one per line, with progress and results updated as each
   model response arrives.
 - Browse classifications by category.
@@ -81,10 +85,19 @@ server.
 
 ## Using the model selector
 
-The app retrieves the current OpenRouter catalog and displays available
-text-input models. Use the search field to find a provider or model. Selecting
-a model shows the catalog's context length and input/output prices per million
-tokens. **Refresh catalog** fetches the latest catalog.
+The app requests the current OpenRouter catalog with the configured API key,
+then filters it to exact model IDs in the decision-model comparison report.
+General-purpose models are not shown. If none of those exact IDs are currently
+in the catalog, the model list stays empty and the app explains why rather than
+silently substituting other models. Use the search field to find an available
+report-listed model. Selecting one shows the catalog's context length and
+input/output prices per million tokens. **Refresh catalog** fetches the latest
+catalog.
+
+The exact allowlist covers Clef Flash, Clef, Tev1 4B Experimental, Mercury
+Decide (paid and free), Solar Decide, Span-01, Span-01 Lite, Kev 4B, and Jev
+1.13. Only IDs present in both that allowlist and the authenticated live catalog
+are displayed.
 
 The suggested value model is selected by comparing listed input and output
 costs among models with at least a 16,000-token context window. Prices and
