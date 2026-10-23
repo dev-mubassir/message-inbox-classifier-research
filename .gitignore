@@ -1,18 +1,19 @@
-__pycache__/
-*.py[cod]
-.venv/
-venv/
-env/
+# Local secrets and environment configuration
 .env
 .env.*
 !.env.example
-.streamlit/secrets.toml
 
-# Local exports can contain private message text.
-/classified_messages.jsonl
-/classified_messages.pdf
+# Dependencies and runtime output
+node_modules/
+npm-debug.log*
+coverage/
+.DS_Store
+Thumbs.db
+__pycache__/
+*.py[cod]
 
-# Downloaded model weights and local experiment output.
-/models/
-/outputs/
-/data/private/
+# Local exports and private research data
+classified_messages.jsonl
+classified_messages.pdf
+data/private/
+outputs/

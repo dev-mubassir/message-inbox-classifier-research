@@ -1,4 +1,0 @@
-streamlit>=1.40.0
-sentence-transformers>=3.0.0
-torch
-reportlab>=4.0
