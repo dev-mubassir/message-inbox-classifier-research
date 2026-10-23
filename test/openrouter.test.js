@@ -1,6 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const {
+  DECISION_MODEL_CANDIDATES,
   DECISION_MODEL_IDS,
   createOpenRouterClient,
   getPrices,
@@ -86,6 +87,64 @@ test("fetches only report-listed decision models from the authenticated catalog"
   assert.deepEqual(models.map((model) => model.id), ["inception/mercury-decide:free"]);
   assert.equal(requestedAuthorization, "Bearer test-secret");
   assert.ok(DECISION_MODEL_IDS.has("cloudflare/clef-flash"));
+  const candidates = await client.listDecisionModels();
+  assert.equal(candidates.length, DECISION_MODEL_CANDIDATES.length);
+  assert.equal(candidates.filter((candidate) => candidate.available).length, 1);
+  assert.equal(candidates.find((candidate) => candidate.tier === "Free").available, true);
+  assert.equal(candidates.find((candidate) => candidate.id === "inception/mercury-decide").available, false);
+});
+
+test("manual model test checks the expected category and reports latency", async () => {
+  const client = createOpenRouterClient({
+    apiKey: "test-secret",
+    fetchImpl: async (url) => {
+      if (url.endsWith("/models")) {
+        return new Response(JSON.stringify({
+          data: [{
+            id: "inception/mercury-decide:free",
+            context_length: 32000,
+            pricing: { prompt: "0", completion: "0" },
+            architecture: { input_modalities: ["text"], output_modalities: ["text"] },
+          }],
+        }), { status: 200, headers: { "Content-Type": "application/json" } });
+      }
+      return new Response(JSON.stringify({
+        choices: [{ message: { content: "Pricing inquiry" } }],
+        usage: { prompt_tokens: 20, completion_tokens: 2, cost: 0 },
+      }), { status: 200, headers: { "Content-Type": "application/json" } });
+    },
+  });
+  const result = await client.testModel({ model: "inception/mercury-decide:free" });
+  assert.equal(result.passed, true);
+  assert.equal(result.expectedCategory, "Pricing inquiry");
+  assert.equal(result.category, result.expectedCategory);
+  assert.equal(result.usage.estimatedCost, 0);
+  assert.ok(result.latencyMs >= 0);
+});
+
+test("marks an unexpected test classification as failed", async () => {
+  const client = createOpenRouterClient({
+    apiKey: "test-secret",
+    fetchImpl: async (url) => {
+      if (url.endsWith("/models")) {
+        return new Response(JSON.stringify({
+          data: [{
+            id: "inception/mercury-decide:free",
+            context_length: 32000,
+            pricing: { prompt: "0", completion: "0" },
+            architecture: { input_modalities: ["text"], output_modalities: ["text"] },
+          }],
+        }), { status: 200, headers: { "Content-Type": "application/json" } });
+      }
+      return new Response(JSON.stringify({
+        choices: [{ message: { content: "General question" } }],
+      }), { status: 200, headers: { "Content-Type": "application/json" } });
+    },
+  });
+  const result = await client.testModel({ model: "inception/mercury-decide:free" });
+  assert.equal(result.passed, false);
+  assert.equal(result.category, "General question");
+  assert.equal(result.expectedCategory, "Pricing inquiry");
 });
 
 test("requires a server-side API key before making a classification request", async () => {
@@ -107,4 +166,8 @@ test("requires a server-side API key before making a classification request", as
     (error) => error.status === 503 && /OPENROUTER_API_KEY/.test(error.message),
   );
   assert.equal(fetchCalled, false);
+  await assert.rejects(
+    client.testModel({ model: "inception/mercury-decide:free" }),
+    (error) => error.status === 503 && /OPENROUTER_API_KEY/.test(error.message),
+  );
 });

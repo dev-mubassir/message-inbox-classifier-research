@@ -174,3 +174,26 @@ textarea::placeholder, input::placeholder { color: #777781; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
 }
+
+.decision-model-list { display: grid; gap: 8px; margin-top: 17px; }
+.candidate-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px; }
+.candidate-heading strong { color: #ededf1; font-size: 11px; }
+.candidate-heading span { color: #92929c; font-size: 9px; }
+.candidate-row {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 10px;
+  padding: 9px 10px; border: 1px solid #242427; border-radius: 8px; background: #030303;
+}
+.candidate-identity { display: grid; min-width: 0; gap: 3px; }
+.candidate-identity strong { color: #e7e7ec; font-size: 10px; font-weight: 650; }
+.candidate-identity span { overflow: hidden; color: #9696a0; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.candidate-status { font-size: 9px; text-align: right; }
+.candidate-status.available { color: #70d8ae; }
+.candidate-status.unavailable { color: #a0a0aa; }
+.candidate-test { min-height: 29px; font-size: 9px; }
+
+@media (max-width: 520px) {
+  .candidate-row { grid-template-columns: minmax(0, 1fr) auto; gap: 7px; }
+  .candidate-status { grid-column: 2; grid-row: 1; }
+  .candidate-test { grid-column: 2; grid-row: 2; }
+  .candidate-identity { grid-row: 1 / span 2; }
+}

@@ -11,18 +11,21 @@ const CATEGORY_DEFINITIONS = [
   ["Spam and scams", "Unsolicited spam, phishing, fraud, suspicious links, or requests for passwords or verification codes."],
 ];
 
-const DECISION_MODEL_IDS = new Set([
-  "cloudflare/clef-flash",
-  "cloudflare/clef",
-  "together/tev1-4b-experimental",
-  "inception/mercury-decide:free",
-  "inception/mercury-decide",
-  "upstage/solar-decide",
-  "respan/span-01",
-  "respan/span-01-lite",
-  "jaredpalmer/kev-4b",
-  "typesafe/jev-1.13",
-]);
+const DECISION_MODEL_CANDIDATES = [
+  { id: "cloudflare/clef-flash", name: "Clef Flash", tier: "Paid", task: "General decisions" },
+  { id: "cloudflare/clef", name: "Clef", tier: "Paid", task: "General decisions" },
+  { id: "together/tev1-4b-experimental", name: "Tev1 4B Experimental", tier: "Paid", task: "General decisions" },
+  { id: "inception/mercury-decide:free", name: "Mercury Decide (free)", tier: "Free", task: "General decisions" },
+  { id: "inception/mercury-decide", name: "Mercury Decide", tier: "Paid", task: "General decisions" },
+  { id: "upstage/solar-decide", name: "Solar Decide", tier: "Paid", task: "General decisions" },
+  { id: "respan/span-01", name: "Span-01", tier: "Paid", task: "Behavior scoring" },
+  { id: "respan/span-01-lite", name: "Span-01 Lite", tier: "Free", task: "Behavior scoring" },
+  { id: "jaredpalmer/kev-4b", name: "Kev 4B", tier: "Paid", task: "General decisions" },
+  { id: "typesafe/jev-1.13", name: "Jev 1.13", tier: "Paid", task: "General decisions" },
+];
+const DECISION_MODEL_IDS = new Set(DECISION_MODEL_CANDIDATES.map((model) => model.id));
+const MODEL_TEST_MESSAGE = "How much do you charge for a promotional post?";
+const MODEL_TEST_EXPECTED_CATEGORY = "Pricing inquiry";
 
 const API_BASE = "https://openrouter.ai/api/v1";
 const CACHE_TTL_MS = 5 * 60 * 1000;
@@ -147,6 +150,16 @@ function createOpenRouterClient({ apiKey, fetchImpl = fetch }) {
     return cachedModels;
   }
 
+  async function listDecisionModels() {
+    const availableModels = await listModels();
+    const availableById = new Map(availableModels.map((model) => [model.id, model]));
+    return DECISION_MODEL_CANDIDATES.map((candidate) => ({
+      ...candidate,
+      available: availableById.has(candidate.id),
+      catalogModel: availableById.get(candidate.id) || null,
+    }));
+  }
+
   async function classify({ message, model }) {
     if (!apiKey) {
       const error = new Error("Add OPENROUTER_API_KEY to your local .env file, then restart the app.");
@@ -211,18 +224,35 @@ function createOpenRouterClient({ apiKey, fetchImpl = fetch }) {
     };
   }
 
+  async function testModel({ model }) {
+    const startedAt = Date.now();
+    const result = await classify({ message: MODEL_TEST_MESSAGE, model });
+    return {
+      ...result,
+      expectedCategory: MODEL_TEST_EXPECTED_CATEGORY,
+      passed: result.category === MODEL_TEST_EXPECTED_CATEGORY,
+      latencyMs: Date.now() - startedAt,
+    };
+  }
+
   return {
     categories,
     classify,
+    decisionModelCandidates: DECISION_MODEL_CANDIDATES,
+    listDecisionModels,
+    modelTestMessage: MODEL_TEST_MESSAGE,
     isConfigured: () => Boolean(apiKey),
     listModels,
     recommendModel,
+    testModel,
   };
 }
 
 module.exports = {
   CATEGORY_DEFINITIONS,
+  DECISION_MODEL_CANDIDATES,
   DECISION_MODEL_IDS,
+  MODEL_TEST_EXPECTED_CATEGORY,
   createOpenRouterClient,
   getPrices,
   parseCategory,

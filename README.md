@@ -12,9 +12,11 @@ generates PDF exports.
 
 ## Features
 
-- Fetch the live OpenRouter model catalog using your server-side API key, then
-  show only the decision-model IDs in the comparison report that are currently
-  present in that catalog.
+- Fetch the live OpenRouter model catalog using your server-side API key, list
+  every paid/free decision model from the comparison report, and mark whether
+  each exact model ID is currently available.
+- Manually test an available model with one short, known-answer request. The UI
+  reports whether the response matches, latency, and estimated cost.
 - Search available decision models by provider or name and inspect context
   size and published input/output prices before selecting one.
 - Get a **recommended value pick** based on the catalog's listed token prices
@@ -79,25 +81,32 @@ anywhere except OpenRouter when you explicitly classify it.
 
 5. Open [http://127.0.0.1:3000](http://127.0.0.1:3000).
 
-The catalog can be browsed without a key, but classification requires a valid
-key. If the app reports that a key is missing, save `.env` and restart the
-server.
+The report's paid/free candidates are shown without a key, but checking which
+models are currently available and classifying messages require a valid key.
+After a successful catalog request, the sidebar confirms **API key verified**.
+If the app reports that the key is missing or rejected, save a valid key in
+`.env` and restart the server.
 
 ## Using the model selector
 
 The app requests the current OpenRouter catalog with the configured API key,
-then filters it to exact model IDs in the decision-model comparison report.
-General-purpose models are not shown. If none of those exact IDs are currently
-in the catalog, the model list stays empty and the app explains why rather than
-silently substituting other models. Use the search field to find an available
-report-listed model. Selecting one shows the catalog's context length and
-input/output prices per million tokens. **Refresh catalog** fetches the latest
-catalog.
+then matches it to exact model IDs in the decision-model comparison report.
+General-purpose models are not shown. The full paid/free report list stays
+visible, including entries marked **Not in catalog**, so an empty current list
+cannot look like a loading failure. Only available exact model IDs can be
+selected for classification. **Refresh catalog** fetches the latest catalog.
 
 The exact allowlist covers Clef Flash, Clef, Tev1 4B Experimental, Mercury
 Decide (paid and free), Solar Decide, Span-01, Span-01 Lite, Kev 4B, and Jev
-1.13. Only IDs present in both that allowlist and the authenticated live catalog
-are displayed.
+1.13. The duplicate free Span-01 Lite listing in the comparison report is
+deduplicated. Only IDs present in both the report list and authenticated live
+catalog are selectable.
+
+When an exact model is available, its current catalog context and token prices
+are displayed. Click **Test response** to send one short sample message and
+check whether the model returns the expected `Pricing inquiry` category. Test
+requests do not run automatically. Paid endpoints incur charges according to
+the provider's current pricing.
 
 The suggested value model is selected by comparing listed input and output
 costs among models with at least a 16,000-token context window. Prices and

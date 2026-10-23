@@ -6,6 +6,7 @@ const elements = {
   connectionDescription: document.querySelector("#connectionDescription"),
   connectionDot: document.querySelector("#connectionDot"),
   connectionTitle: document.querySelector("#connectionTitle"),
+  decisionModelList: document.querySelector("#decisionModelList"),
   emptyState: document.querySelector("#emptyState"),
   exportJsonl: document.querySelector("#exportJsonl"),
   exportPdf: document.querySelector("#exportPdf"),
@@ -29,6 +30,7 @@ const elements = {
 const state = {
   apiKeyConfigured: false,
   categories: [],
+  candidates: [],
   folder: "all",
   messages: [],
   models: [],
@@ -134,6 +136,84 @@ function renderModelOptions() {
   renderModelDetails();
 }
 
+function renderDecisionModels() {
+  elements.decisionModelList.replaceChildren();
+  const heading = document.createElement("div");
+  heading.className = "candidate-heading";
+  const title = document.createElement("strong");
+  title.textContent = `Decision models from report (${state.candidates.length})`;
+  const note = document.createElement("span");
+  note.textContent = "Paid/free tier is from the report. Test calls use one message; paid models incur provider charges.";
+  heading.append(title, note);
+  elements.decisionModelList.append(heading);
+
+  for (const candidate of state.candidates) {
+    const row = document.createElement("div");
+    row.className = "candidate-row";
+    const identity = document.createElement("div");
+    identity.className = "candidate-identity";
+    const name = document.createElement("strong");
+    name.textContent = candidate.name;
+    const metadata = document.createElement("span");
+    const pricing = candidate.catalogModel?.pricing;
+    const liveDetails = candidate.catalogModel
+      ? ` · ${formatContext(candidate.catalogModel.context_length)} · Input ${formatUsdPerMillion(pricing?.prompt)} · Output ${formatUsdPerMillion(pricing?.completion)}`
+      : "";
+    metadata.textContent = `Report tier: ${candidate.tier} · ${candidate.task} · ${candidate.id}${liveDetails}`;
+    identity.append(name, metadata);
+
+    const status = document.createElement("span");
+    status.className = `candidate-status ${candidate.available ? "available" : "unavailable"}`;
+    status.textContent = candidate.testResult || (
+      candidate.available
+        ? "Available"
+        : !state.apiKeyConfigured
+          ? "API key required"
+          : candidate.checkFailed
+            ? "Check failed"
+            : candidate.checked
+              ? "Not in catalog"
+              : "Not checked"
+    );
+    row.append(identity, status);
+
+    if (candidate.available && state.apiKeyConfigured) {
+      const testButton = document.createElement("button");
+      testButton.className = "button button-subtle candidate-test";
+      testButton.type = "button";
+      testButton.textContent = candidate.testing ? "Testing…" : "Test response";
+      testButton.disabled = Boolean(candidate.testing);
+      testButton.addEventListener("click", () => testDecisionModel(candidate.id));
+      row.append(testButton);
+    }
+    elements.decisionModelList.append(row);
+  }
+}
+
+async function testDecisionModel(modelId) {
+  const candidate = state.candidates.find((item) => item.id === modelId);
+  if (!candidate || candidate.testing) return;
+  candidate.testing = true;
+  candidate.testResult = "";
+  renderDecisionModels();
+  elements.modelError.hidden = true;
+  try {
+    const result = await fetchJson("/api/models/test", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ model: modelId }),
+    });
+    candidate.testResult = result.passed
+      ? `Passed · ${result.latencyMs} ms · ${formatCost(result.usage.estimatedCost)}`
+      : `Responded ${result.category}; expected ${result.expectedCategory}`;
+  } catch (error) {
+    candidate.testResult = `Failed · ${error.message}`;
+  } finally {
+    candidate.testing = false;
+    renderDecisionModels();
+  }
+}
+
 async function loadSetup() {
   elements.modelError.hidden = true;
   elements.refreshModels.disabled = true;
@@ -142,11 +222,13 @@ async function loadSetup() {
     const config = await fetchJson("/api/config");
     state.apiKeyConfigured = config.apiKeyConfigured;
     state.categories = config.categories;
+    state.candidates = config.decisionModels.map((candidate) => ({ ...candidate, checked: false }));
     renderFolders();
     if (!state.apiKeyConfigured) {
       state.models = [];
       state.recommendedModelId = "";
       renderModelOptions();
+      renderDecisionModels();
       setConnection(false, "API key needed", "Add a key in your local .env file");
       elements.apiNotice.textContent = "To fetch decision models and classify messages, create a local .env file from .env.example, add your OpenRouter API key, then restart the app. The key stays on the server.";
       elements.apiNotice.hidden = false;
@@ -156,16 +238,21 @@ async function loadSetup() {
 
     const catalog = await fetchJson("/api/models");
     state.models = catalog.models;
+    state.candidates = catalog.candidates.map((candidate) => ({ ...candidate, checked: true }));
     state.recommendedModelId = catalog.recommendedModelId;
     renderFolders();
     renderModelOptions();
-    setConnection(true, "API key ready", "Key stays on this computer");
+    renderDecisionModels();
+    setConnection(true, "API key verified", "OpenRouter catalog access works");
     elements.apiNotice.hidden = true;
     elements.modelError.hidden = true;
   } catch (error) {
     elements.modelError.textContent = error.message;
     elements.modelError.hidden = false;
-    setConnection(false, "Catalog unavailable", "Check your connection and refresh");
+    state.candidates = state.candidates.map((candidate) => ({ ...candidate, checkFailed: true }));
+    renderDecisionModels();
+    const rejectedKey = /unauthorized|invalid api key|authentication|forbidden|http 401|http 403/i.test(error.message);
+    setConnection(false, rejectedKey ? "API key rejected" : "Catalog unavailable", rejectedKey ? "Check your local .env key" : "Check your connection and refresh");
   } finally {
     elements.refreshModels.disabled = false;
     elements.modelSelect.disabled = !state.apiKeyConfigured || state.models.length === 0;

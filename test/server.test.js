@@ -17,7 +17,8 @@ test("serves the interface, exposes safe setup state, and validates requests", a
     const config = await configResponse.json();
     assert.equal(typeof config.apiKeyConfigured, "boolean");
     assert.equal(config.categories.length, 10);
-    assert.deepEqual(Object.keys(config).sort(), ["apiKeyConfigured", "categories"]);
+    assert.equal(config.decisionModels.length, 10);
+    assert.deepEqual(Object.keys(config).sort(), ["apiKeyConfigured", "categories", "decisionModels"]);
 
     const invalidMessage = await fetch(`${baseUrl}/api/classify`, {
       method: "POST",
@@ -26,6 +27,13 @@ test("serves the interface, exposes safe setup state, and validates requests", a
     });
     assert.equal(invalidMessage.status, 400);
     assert.match((await invalidMessage.json()).error, /non-empty/);
+
+    const invalidModelTest = await fetch(`${baseUrl}/api/models/test`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ model: "" }),
+    });
+    assert.equal(invalidModelTest.status, 400);
 
     const emptyExport = await fetch(`${baseUrl}/api/export/pdf`, {
       method: "POST",

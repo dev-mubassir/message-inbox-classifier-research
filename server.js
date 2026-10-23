@@ -23,13 +23,32 @@ app.get("/api/config", (_request, response) => {
   response.json({
     apiKeyConfigured: openRouter.isConfigured(),
     categories: openRouter.categories,
+    decisionModels: openRouter.decisionModelCandidates,
   });
 });
 
 app.get("/api/models", async (_request, response, next) => {
   try {
-    const models = await openRouter.listModels();
-    response.json({ models, recommendedModelId: openRouter.recommendModel(models) });
+    const candidates = await openRouter.listDecisionModels();
+    const models = candidates.filter((candidate) => candidate.available).map((candidate) => candidate.catalogModel);
+    response.json({
+      models,
+      candidates,
+      recommendedModelId: openRouter.recommendModel(models),
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post("/api/models/test", async (request, response, next) => {
+  try {
+    const { model } = request.body || {};
+    if (typeof model !== "string" || !model.trim() || model.length > 200) {
+      return response.status(400).json({ error: "Select a valid decision model to test." });
+    }
+    const result = await openRouter.testModel({ model: model.trim() });
+    response.json(result);
   } catch (error) {
     next(error);
   }
