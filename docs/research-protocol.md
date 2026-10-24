@@ -1,98 +1,77 @@
-# Research and Evaluation Protocol
+# Research and Model Comparison Protocol
 
-This document describes a reproducible way to evaluate the message inbox
-classifier. It is a proposed protocol, not a report of completed experiments.
-Do not describe unmeasured performance as a research result.
+This is a suggested protocol for evaluating classification quality and model
+trade-offs. It contains no completed experiments or performance claims.
 
 ## Research questions
 
-1. How well does the fixed category-description setup classify messages from
-   the intended use case?
-2. Which categories are most frequently confused?
-3. How do CPU thread count and inference batch size affect throughput and
-   memory use on documented hardware?
-4. Do performance results change across languages, message lengths, or
-   informal spelling styles?
+1. How well does Cloudflare Clef Flash map messages to the fixed category set?
+2. Which categories are most often confused?
+3. How do latency and Workers AI usage vary by message length?
+4. Do results differ across languages, informal spelling, and domains?
 
-## Dataset and privacy
+## Data and privacy
 
-Create a labeled evaluation set with permission to use every message. Prefer
-consented and anonymized data. Do not collect private messages without
-authorization, or publish raw messages or identifiers.
+Use only data you have permission to evaluate. Prefer consented and anonymized
+messages. Keep raw messages private unless all relevant people explicitly
+consent to publication. Document data provenance, collection period,
+anonymization, exclusions, and known limitations.
 
-For each example, keep only what the study needs, such as:
+Use stable random IDs rather than account identifiers. Remove names, handles,
+phone numbers, email addresses, and other identifying content wherever
+possible. Never commit `.env`, provider credentials, raw inbox exports, or
+private datasets.
 
-```text
-message_id, text, gold_label, language, source_split
-```
+Have at least two annotators independently label a subset using written
+definitions for the ten categories. Record the agreement measure and resolve
+disagreements using a documented process. Keep messages from the same
+conversation and near-duplicates in the same data partition to avoid leakage.
 
-Use stable random IDs instead of account identifiers. Keep the raw dataset
-private unless all contributors explicitly consent to publication. Publish
-label definitions, dataset size, collection method, anonymization steps, and
-known limitations even when the actual text cannot be shared.
+## Model comparison
 
-Have at least two people independently label a subset using written category
-definitions. Resolve disagreements with a documented adjudication process and
-report inter-annotator agreement (for example, Cohen's kappa for two annotators).
-Do not put near-duplicate messages or messages from the same conversation in
-both training/development data and the final test set.
+For each model, record:
 
-## Classification quality
+- Exact Cloudflare model ID and test date.
+- Category definitions and prompt version.
+- Dataset version, sample size, and per-category counts.
+- Input language and length distribution.
+- Cloudflare-reported input/output tokens and applicable Workers AI pricing.
+- Median and range of end-to-end response latency.
+- Provider errors, invalid category responses, and retries.
+- Any model settings changed from the app defaults.
 
-Freeze the category descriptions and model revision before evaluating. On a
-held-out test set, report:
+Use the same held-out examples and prompt across models. Randomize or
+interleave model run order where possible to reduce time-of-day or service-load
+bias. Do not send sensitive data without the necessary consent and policy
+review. Model outputs may be retained or processed according to Cloudflare's
+applicable terms.
 
-- Number of examples overall and per category.
-- Accuracy and macro-averaged precision, recall, and F1.
-- Per-category precision, recall, and F1.
-- Confusion matrix with the category order stated.
-- Results by language and message-length group when each group has enough
-  examples to be meaningful.
-- Confidence intervals or repeated-split variation where feasible.
+## Quality metrics
 
-The score returned by the reranker is not a probability. Do not interpret it
-as calibrated confidence unless calibration has been separately measured on
-held-out data.
+Report overall accuracy, macro-averaged precision/recall/F1, per-category
+precision/recall/F1, and a confusion matrix with a declared label order. Report
+uncertainty or repeated-split variation where practical. Include the number of
+examples per category and do not hide unsupported languages or failed
+responses.
 
-## CPU performance benchmark
-
-Record the exact CPU model, logical and physical core counts if known, RAM,
-operating system, Python version, PyTorch version/build, Sentence Transformers
-version, model revision, and whether the machine was otherwise busy.
-
-For each configuration:
-
-1. Use the same fixed, non-sensitive input set and category descriptions.
-2. Run a warm-up before timing.
-3. Measure at least three repetitions and report median messages per second
-   along with the range or standard deviation.
-4. Measure end-to-end inference time separately from model download and load
-   time.
-5. Record peak process memory and CPU utilization using a consistent
-   measurement tool.
-6. Change one setting at a time, such as `MODEL_BATCH_SIZE`,
-   `CLASSIFICATION_CHUNK_SIZE`, or PyTorch thread count.
-7. Verify predictions remain identical for the same model and inputs when
-   changing only batch/thread settings.
-
-Do not assume that a larger batch or all logical threads will always be faster:
-measure for the target machine and workload. Include failed or memory-limited
-configurations in the notes rather than hiding them.
+The app uses a single category response, not a calibrated probability. Do not
+present the model's answer as certainty. If measuring calibration or
+abstention, design and evaluate that behavior separately.
 
 ## Suggested results table
 
-| Run | Model revision | CPU / RAM | Threads | Model batch | Chunk size | Messages | Median msg/s | Peak RAM | Notes |
-|-----|----------------|-----------|---------|-------------|------------|----------|--------------|----------|-------|
-|     |                |           |         |             |            |          |              |          |       |
+| Model ID | Test date | Examples | Accuracy | Macro F1 | Median latency | Workers AI usage | Errors |
+|----------|-----------|----------|----------|----------|----------------|-----------------------|--------|
+|          |           |          |          |          |                |                       |        |
 
 ## Reproducibility checklist
 
-- [ ] Record the Git commit and dependency versions.
-- [ ] Record the exact model revision, not just its display name.
-- [ ] Document label definitions and annotation instructions.
-- [ ] Keep train, development, and test partitions separate.
-- [ ] Document preprocessing, exclusions, and missing data.
-- [ ] State whether the CPU or GPU path was used.
-- [ ] Report all relevant hardware, thread, and batch settings.
-- [ ] Keep private data and identifiable messages out of public artifacts.
-- [ ] Separate observed results from hypotheses and recommendations.
+- [ ] Record the Git commit, Node version, and dependency lockfile.
+- [ ] Record exact model IDs, date, prompt, and model settings.
+- [ ] Document annotation instructions and annotator agreement.
+- [ ] Keep conversation groups and duplicates within one data split.
+- [ ] Document consent, anonymization, and dataset exclusions.
+- [ ] Record Workers AI usage and latency observations.
+- [ ] Report errors, unsupported categories, and all material limitations.
+- [ ] Keep API keys, private messages, and raw personal data out of public
+  artifacts.

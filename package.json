@@ -1,0 +1,20 @@
+{
+  "name": "message-inbox-classifier-research",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A local live-updating message inbox classifier powered by Cloudflare Workers AI Clef Flash.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20.12.0"
+  },
+  "dependencies": {
+    "dotenv": "^16.6.1",
+    "express": "^5.1.0",
+    "pdfkit": "^0.17.2"
+  }
+}

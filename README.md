@@ -1,34 +1,118 @@
 # Message Inbox Classifier Research
 
-A local Streamlit prototype for organizing incoming messages into business and
-community categories. It uses the
-[BAAI/bge-reranker-v2-m3](https://huggingface.co/BAAI/bge-reranker-v2-m3)
-cross-encoder to compare each message with short descriptions of the available
-categories.
+A lightweight, live-updating HTML/CSS/JavaScript inbox for message
+classification using Cloudflare Workers AI's
+[Clef Flash decision model](https://developers.cloudflare.com/workers-ai/models/clef-flash/).
+A small Node.js server keeps your Cloudflare credentials out of the browser,
+calls the model directly through the Workers AI REST API, and generates PDF
+exports.
 
-This repository is intended for experimentation and evaluation, not as a
-production moderation, security, or business decision system. Predictions may
-be wrong; review important or ambiguous messages yourself.
+> **Research prototype:** model output is a suggestion, not verified truth or a
+> calibrated probability. Review important classifications yourself. Workers AI
+> has a daily free allocation and may incur charges above that allocation.
 
 ## Features
 
-- Paste multiple messages, one message per line, and classify without a fixed
-  application-level message-count limit.
-- Browse results in category folders in the Streamlit inbox.
-- Download all messages in the current app session as a category-organized PDF
-  or compact JSONL.
-- Use CUDA when PyTorch detects a compatible GPU; otherwise, run on CPU.
-- On CPU, configure PyTorch to use the logical processors reported by the
-  operating system and classify bounded chunks of messages to batch model work.
+- Classify directly with Cloudflare Workers AI model `@cf/cloudflare/clef-flash`.
+- Return the category, model confidence, token usage, and request
+  latency for each message.
+- Keep the Cloudflare account ID and API token on the server, never in the
+  browser.
+- Use a pure-black dark interface throughout the sidebar, model panel,
+  message composer, and results.
+- Classify messages one per line, with progress and results updated as each
+  model response arrives.
+- Browse classifications by category.
+- Export the current browser session as organized PDF or compact JSONL.
+- Keep the API key in a server-side `.env` file. The key is never sent to the
+  browser or included in API responses.
 
-Messages and classifications are held in Streamlit session state. They are not
-saved to a database by this app and are lost when that session ends. Keep
-downloaded exports private: they may contain personal messages.
+Classified messages live in browser memory for that tab. Reloading or closing
+the tab clears them. The app does not store a message database or send data
+anywhere except Cloudflare when you explicitly classify it.
 
-## Categories
+## Requirements
 
-The classifier compares each message with the descriptions in `model.py` and
-selects the category with the highest reranker score:
+- Node.js 20.12 or later and npm
+- A Cloudflare account with Workers AI enabled
+- A Workers AI API token and Cloudflare account ID
+- Internet access for the Cloudflare Workers AI API
+
+## Quick start
+
+1. Clone or download this repository, then open a terminal in its folder.
+2. Install the dependencies:
+
+   ```sh
+   npm install
+   ```
+
+3. Create a Workers AI token and get your account ID:
+
+   - Open the [Workers AI dashboard](https://dash.cloudflare.com/?to=/:account/ai/workers-ai).
+   - Select **Use REST API**, then **Create a Workers AI API Token** and copy
+     the token and the displayed **Account ID**.
+   - If you create a token manually, grant **Workers AI - Read** and
+     **Workers AI - Edit**.
+
+4. Copy `.env.example` to `.env` and add those Cloudflare credentials:
+
+   **Windows PowerShell**
+
+   ```powershell
+   Copy-Item .env.example .env
+   notepad .env
+   ```
+
+   **macOS / Linux**
+
+   ```sh
+   cp .env.example .env
+   ```
+
+   Edit `.env`:
+
+   ```dotenv
+   CLOUDFLARE_ACCOUNT_ID=your_actual_account_id_here
+   CLOUDFLARE_API_TOKEN=your_actual_workers_ai_token_here
+   PORT=3000
+   ```
+
+   Never commit `.env` or share its contents. `.gitignore` excludes it.
+5. Start the app:
+
+   ```sh
+   npm start
+   ```
+
+6. Open [http://127.0.0.1:3000](http://127.0.0.1:3000).
+
+The **Test response** button sends a known pricing question and reports the
+model's returned category, confidence, and latency. The tester calls the
+Cloudflare account REST endpoint for
+`@cf/cloudflare/clef-flash`, passing the message as decision state and the
+inbox categories as the model's choice schema. No model catalog or third-party
+model router is used. The UI shows the returned label and the
+model's confidence. Cloudflare's Workers AI REST API requires a token with
+Workers AI permissions and your account ID.
+
+`cloudflared` is the Cloudflare Tunnel command-line client. It is not needed
+for this local app to call Workers AI. Use a tunnel only if you intentionally
+need remote access to the local web UI; secure the app before exposing it.
+
+If you want temporary remote browser access, start the app locally and run
+`cloudflared tunnel --url http://127.0.0.1:3000` in another terminal. Keep the
+generated tunnel URL private and stop the tunnel when you finish. A tunnel
+exposes the web UI; it does not provide the model API credentials or run the
+model.
+
+## Input, results, and exports
+
+Paste one message per line. Each non-empty line is sent as its own
+classification request. Results appear progressively. If a request fails, the
+error is shown and already completed results remain in the browser.
+
+The classifier chooses exactly one category:
 
 - Service question
 - Pricing inquiry
@@ -41,87 +125,63 @@ selects the category with the highest reranker score:
 - Support
 - Spam and scams
 
-These scores are ranking scores, **not calibrated probabilities**. A high score
-does not guarantee a correct prediction.
+Downloads include all results in the current tab, regardless of the selected
+category folder:
 
-## Requirements
+- **PDF** — grouped by category, with the model and classification
+  time.
+- **JSONL** — one compact JSON record per line with `text`, `category`, `model`,
+  `confidence`, `latencyMs`, and `createdAt` fields.
 
-- Python 3.10 or newer
-- pip
-- Internet access the first time the model is loaded, so the Hugging Face model
-  files can be downloaded
-- Sufficient memory for PyTorch and the model; CPU inference can be slow
+## Configuration
 
-## Install and run
+| Variable | Purpose | Default |
+|----------|---------|---------|
+| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare account ID for Workers AI | unset |
+| `CLOUDFLARE_API_TOKEN` | Server-side Workers AI API token | unset |
+| `PORT` | Local web server port | `3000` |
 
-### Windows PowerShell
+The server binds to `127.0.0.1` so it is not exposed to the local network by
+default. Do not change the bind address or deploy this research prototype on a
+public server without adding authentication, request limits, abuse protection,
+and a deployment-grade secrets manager.
 
-From the repository directory:
+## Development and tests
 
-```powershell
-py -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
-python -m streamlit run model.py
+```sh
+npm run dev
+npm test
 ```
 
-### macOS or Linux
+The test suite uses Node's built-in test runner. Tests do not call Cloudflare or
+need credentials.
 
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
-python -m streamlit run model.py
-```
+## Research protocol
 
-Streamlit prints a local URL after launch. Open that URL in a browser, paste one
-message per line, and select **Classify messages**. The first classification
-may take longer while the model downloads and initializes.
+See [`docs/research-protocol.md`](docs/research-protocol.md) for suggested
+privacy-aware evaluation, quality metrics, and model comparison procedures.
+This repository does not claim measured accuracy, latency, or cost results.
 
-### CPU and GPU notes
+## About the author
 
-The app chooses CUDA when `torch.cuda.is_available()` is true, otherwise CPU.
-On CPU, the app sets PyTorch's intra-op thread count to the logical processor
-count reported by Python's `os.cpu_count()`. Each classification chunk contains
-up to 32 messages, and the cross-encoder prediction batch size is 32.
+Created and maintained by [@dev-mubassir](https://github.com/dev-mubassir).
+This independent research project explores practical message classification
+with decision models, transparent evaluation, and privacy-conscious handling
+of inbox data.
 
-These settings are starting points, not a guarantee of full CPU utilization or
-maximum throughput. Performance depends on the CPU, memory bandwidth,
-operating-system scheduling, PyTorch build, message lengths, and competing
-workloads. To experiment with settings, change `MODEL_BATCH_SIZE` and
-`CLASSIFICATION_CHUNK_SIZE` near the top of `model.py`, then benchmark on the
-same machine using the protocol in
-[`docs/research-protocol.md`](docs/research-protocol.md). Larger batches can
-increase memory use; tune cautiously.
+## Privacy and responsible use
 
-## Input and exports
-
-Enter one non-empty message per line. Multi-line messages are not represented
-as a single input item by the current text-area interface.
-
-After at least one classification, the export controls offer:
-
-- `classified_messages.pdf`: readable report grouped by category.
-- `classified_messages.jsonl`: one JSON object per line, with `text` and
-  `label` fields, for example:
-
-  ```json
-  {"text":"How much do you charge?","label":"Pricing inquiry"}
-  ```
-
-Both exports cover all messages in the current Streamlit session, not only the
-selected folder. Exported files are intentionally excluded from Git because
-they may contain private message text.
-
-## Research and evaluation
-
-See [`docs/research-protocol.md`](docs/research-protocol.md) for a proposed
-evaluation protocol, dataset guidance, metrics, and CPU benchmarking procedure.
-No accuracy or throughput results are claimed by this repository. Report
-measured results with the exact model revision, environment, data split, and
-hardware configuration.
+- Do not commit API keys, real direct messages, personally identifying
+  information, or private research data.
+- Messages are sent to Cloudflare Workers AI when classified. Review
+  Cloudflare's current data-handling policies before using sensitive content.
+- Use consented, anonymized data for research. Remove names, handles, phone
+  numbers, email addresses, and identifying links wherever practical.
+- Do not rely on predictions alone for decisions that affect a person.
+- The spam/scam category is a text label, not a link scanner or security
+  guarantee.
+- Model behavior, availability, pricing, context limits, and provider policies
+  can change. Verify them in Cloudflare's documentation before use.
 
 ## Project structure
 
@@ -129,26 +189,23 @@ hardware configuration.
 .
 ├── docs/
 │   └── research-protocol.md
-├── model.py
-├── requirements.txt
-└── README.md
+├── public/
+│   ├── app.js
+│   ├── index.html
+│   └── styles.css
+├── src/
+│   ├── cloudflare.js
+│   └── pdf.js
+├── test/
+│   └── cloudflare.test.js
+├── .env.example
+├── .gitignore
+├── package.json
+└── server.js
 ```
-
-## Privacy and responsible use
-
-- Do not commit real direct messages, personal data, credentials, or exported
-  inbox files.
-- Use consented, anonymized data for research. Remove names, handles, phone
-  numbers, email addresses, links, and other identifying details where they
-  are not essential.
-- Do not rely on these predictions alone for decisions that affect a person.
-- The spam/scam label is a text-classification category, not a security
-  guarantee or a link scanner.
-- Model weights are downloaded from Hugging Face at runtime; consult the model
-  card and its license before redistributing or using the weights.
 
 ## License
 
-No code license is included. Unless the repository owner adds a license, all
-rights remain with the respective copyright holders; public visibility alone
-does not grant permission to reuse the code.
+No code license is included. Public visibility does not grant permission to
+reuse the code. Cloudflare and model providers have their own terms, pricing,
+and model licenses.

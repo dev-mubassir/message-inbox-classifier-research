@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#000000">
+    <meta name="description" content="Classify and organize messages with Cloudflare Workers AI Clef Flash.">
+    <title>Inbox research · Message classifier</title>
+    <link rel="stylesheet" href="/styles.css">
+    <script src="/app.js" defer></script>
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <a class="brand" href="/" aria-label="Message Inbox Classifier home">
+          <span class="brand-mark" aria-hidden="true">m</span>
+          <span><strong>inbox lab</strong><small>message research</small></span>
+        </a>
+
+        <div class="sidebar-label">WORKSPACE</div>
+        <nav class="folder-list" id="folderList" aria-label="Message categories">
+          <button class="folder active" data-folder="all" type="button">
+            <span>All messages</span><span class="folder-count" id="allCount">0</span>
+          </button>
+        </nav>
+        <div class="sidebar-bottom">
+          <span class="connection-dot" id="connectionDot"></span>
+          <div><strong id="connectionTitle">Connecting</strong><small id="connectionDescription">Checking local setup</small></div>
+        </div>
+      </aside>
+
+      <main class="main">
+        <header class="topbar">
+          <div>
+            <div class="eyebrow">RESEARCH WORKSPACE</div>
+            <h1>Message inbox</h1>
+            <p class="subtitle">Route incoming messages with Cloudflare Workers AI.</p>
+          </div>
+          <div class="topbar-count"><strong id="messageCount">0</strong><span>messages</span></div>
+        </header>
+
+        <section class="panel model-panel" aria-labelledby="modelHeading">
+          <div class="panel-heading">
+            <div><div class="eyebrow">CLASSIFICATION MODEL</div><h2 id="modelHeading">Cloudflare Clef Flash</h2></div>
+            <button class="button button-subtle" id="testModelButton" type="button">Test response</button>
+          </div>
+          <div class="recommendation">Direct Cloudflare Workers AI · <code>@cf/cloudflare/clef-flash</code></div>
+          <div class="model-test-result" id="modelTestResult" role="status" aria-live="polite" hidden></div>
+          <div class="api-notice" id="apiNotice" role="status" hidden></div>
+          <div class="error-text" id="modelError" role="alert" hidden></div>
+        </section>
+
+        <section class="panel composer" aria-labelledby="composerHeading">
+          <div class="panel-heading">
+            <div><div class="eyebrow">INCOMING MESSAGES</div><h2 id="composerHeading">Classify a batch</h2></div>
+            <span class="private-pill">Messages stay in this browser session; classification is sent to Cloudflare</span>
+          </div>
+          <label class="visually-hidden" for="messageInput">Messages, one per line</label>
+          <textarea id="messageInput" rows="6" placeholder="Paste messages here, one per line…&#10;&#10;How much do you charge for a video?&#10;Loved your latest post!"></textarea>
+          <div class="composer-footer">
+            <span id="inputCount">0 messages ready</span>
+            <button class="button button-primary" id="classifyButton" type="button">Classify messages <span aria-hidden="true">→</span></button>
+          </div>
+          <div class="progress-wrap" id="progressWrap" hidden>
+            <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+            <div class="progress-caption" id="progressCaption" aria-live="polite"></div>
+          </div>
+          <div class="error-text" id="classifyError" role="alert" hidden></div>
+        </section>
+
+        <section class="results-section">
+          <div class="results-heading">
+            <div><div class="eyebrow">CLASSIFICATION RESULTS</div><h2 id="resultsTitle">All messages</h2></div>
+            <div class="export-actions">
+              <button class="button button-subtle" id="exportJsonl" type="button" disabled>Export JSONL</button>
+              <button class="button button-subtle" id="exportPdf" type="button" disabled>Export PDF</button>
+            </div>
+          </div>
+          <div class="results-list" id="resultsList" aria-live="polite"></div>
+          <div class="empty-state" id="emptyState">
+            <div class="empty-icon" aria-hidden="true">✳</div>
+            <strong>Your inbox is ready</strong>
+            <span>Choose a model, paste some messages, and start classifying.</span>
+          </div>
+        </section>
+        <footer class="page-footer">Predictions are model-generated suggestions, not calibrated probabilities. Review important messages manually.</footer>
+      </main>
+    </div>
+  </body>
+</html>
