@@ -5,9 +5,9 @@ trade-offs. It contains no completed experiments or performance claims.
 
 ## Research questions
 
-1. How well does each selected model map messages to the fixed category set?
+1. How well does Cloudflare Clef Flash map messages to the fixed category set?
 2. Which categories are most often confused?
-3. How do cost and latency vary by model and message length?
+3. How do latency and Workers AI usage vary by message length?
 4. Do results differ across languages, informal spelling, and domains?
 
 ## Data and privacy
@@ -31,11 +31,11 @@ conversation and near-duplicates in the same data partition to avoid leakage.
 
 For each model, record:
 
-- Exact OpenRouter model ID and test date.
+- Exact Cloudflare model ID and test date.
 - Category definitions and prompt version.
 - Dataset version, sample size, and per-category counts.
 - Input language and length distribution.
-- OpenRouter-reported token use and cost, when available.
+- Cloudflare-reported input/output tokens and applicable Workers AI pricing.
 - Median and range of end-to-end response latency.
 - Provider errors, invalid category responses, and retries.
 - Any model settings changed from the app defaults.
@@ -43,8 +43,8 @@ For each model, record:
 Use the same held-out examples and prompt across models. Randomize or
 interleave model run order where possible to reduce time-of-day or service-load
 bias. Do not send sensitive data without the necessary consent and policy
-review. Model outputs may be retained or processed according to the applicable
-OpenRouter and provider terms.
+review. Model outputs may be retained or processed according to Cloudflare's
+applicable terms.
 
 ## Quality metrics
 
@@ -60,7 +60,7 @@ abstention, design and evaluate that behavior separately.
 
 ## Suggested results table
 
-| Model ID | Test date | Examples | Accuracy | Macro F1 | Median latency | Median cost / message | Errors |
+| Model ID | Test date | Examples | Accuracy | Macro F1 | Median latency | Workers AI usage | Errors |
 |----------|-----------|----------|----------|----------|----------------|-----------------------|--------|
 |          |           |          |          |          |                |                       |        |
 
@@ -71,7 +71,7 @@ abstention, design and evaluate that behavior separately.
 - [ ] Document annotation instructions and annotator agreement.
 - [ ] Keep conversation groups and duplicates within one data split.
 - [ ] Document consent, anonymization, and dataset exclusions.
-- [ ] Record provider cost and latency observations, not estimates alone.
+- [ ] Record Workers AI usage and latency observations.
 - [ ] Report errors, unsupported categories, and all material limitations.
 - [ ] Keep API keys, private messages, and raw personal data out of public
   artifacts.

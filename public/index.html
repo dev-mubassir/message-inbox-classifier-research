@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#000000">
-    <meta name="description" content="Classify and organize messages with switchable OpenRouter decision models.">
+    <meta name="description" content="Classify and organize messages with Cloudflare Workers AI Clef Flash.">
     <title>Inbox research · Message classifier</title>
     <link rel="stylesheet" href="/styles.css">
     <script src="/app.js" defer></script>
@@ -34,29 +34,18 @@
           <div>
             <div class="eyebrow">RESEARCH WORKSPACE</div>
             <h1>Message inbox</h1>
-            <p class="subtitle">Route incoming messages. Switch models whenever you want.</p>
+            <p class="subtitle">Route incoming messages with Cloudflare Workers AI.</p>
           </div>
           <div class="topbar-count"><strong id="messageCount">0</strong><span>messages</span></div>
         </header>
 
         <section class="panel model-panel" aria-labelledby="modelHeading">
           <div class="panel-heading">
-            <div><div class="eyebrow">MODEL CONTROL</div><h2 id="modelHeading">Choose a decision model</h2></div>
-            <button class="button button-subtle" id="refreshModels" type="button">Refresh catalog</button>
+            <div><div class="eyebrow">CLASSIFICATION MODEL</div><h2 id="modelHeading">Cloudflare Clef Flash</h2></div>
+            <button class="button button-subtle" id="testModelButton" type="button">Test response</button>
           </div>
-          <div class="model-controls">
-            <label class="model-search-label" for="modelSearch">Search report-listed decision models</label>
-            <input id="modelSearch" type="search" placeholder="Search by model or provider…" autocomplete="off">
-            <label class="model-select-label" for="modelSelect">Available decision model</label>
-            <select id="modelSelect" aria-describedby="recommendationNote">
-              <option value="">Loading model catalog…</option>
-            </select>
-          </div>
-          <div class="model-meta">
-            <div class="recommendation" id="recommendationNote">Finding a current value pick from OpenRouter pricing…</div>
-            <div class="model-details" id="modelDetails" aria-live="polite"></div>
-          </div>
-          <div class="decision-model-list" id="decisionModelList" aria-live="polite"></div>
+          <div class="recommendation">Direct Cloudflare Workers AI · <code>@cf/cloudflare/clef-flash</code></div>
+          <div class="model-test-result" id="modelTestResult" role="status" aria-live="polite" hidden></div>
           <div class="api-notice" id="apiNotice" role="status" hidden></div>
           <div class="error-text" id="modelError" role="alert" hidden></div>
         </section>
@@ -64,7 +53,7 @@
         <section class="panel composer" aria-labelledby="composerHeading">
           <div class="panel-heading">
             <div><div class="eyebrow">INCOMING MESSAGES</div><h2 id="composerHeading">Classify a batch</h2></div>
-            <span class="private-pill">Private to this browser session</span>
+            <span class="private-pill">Messages stay in this browser session; classification is sent to Cloudflare</span>
           </div>
           <label class="visually-hidden" for="messageInput">Messages, one per line</label>
           <textarea id="messageInput" rows="6" placeholder="Paste messages here, one per line…&#10;&#10;How much do you charge for a video?&#10;Loved your latest post!"></textarea>

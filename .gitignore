@@ -15,5 +15,7 @@ __pycache__/
 # Local exports and private research data
 classified_messages.jsonl
 classified_messages.pdf
+classified_messages*.jsonl
+classified_messages*.pdf
 data/private/
 outputs/

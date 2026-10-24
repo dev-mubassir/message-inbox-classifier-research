@@ -2,7 +2,7 @@
   "name": "message-inbox-classifier-research",
   "version": "1.0.0",
   "private": true,
-  "description": "A local live-updating message inbox classifier with switchable OpenRouter models.",
+  "description": "A local live-updating message inbox classifier powered by Cloudflare Workers AI Clef Flash.",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

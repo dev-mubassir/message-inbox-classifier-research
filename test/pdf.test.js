@@ -1,7 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const { buildPdf, toPdfText } = require("../src/pdf");
-const { CATEGORY_DEFINITIONS } = require("../src/openrouter");
+const { CATEGORY_DEFINITIONS } = require("../src/cloudflare");
 
 test("builds a grouped PDF and safely represents characters outside Helvetica", async () => {
   const pdf = await buildPdf(

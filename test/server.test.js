@@ -15,25 +15,35 @@ test("serves the interface, exposes safe setup state, and validates requests", a
 
     const configResponse = await fetch(`${baseUrl}/api/config`);
     const config = await configResponse.json();
-    assert.equal(typeof config.apiKeyConfigured, "boolean");
+    assert.equal(typeof config.apiConfigured, "boolean");
     assert.equal(config.categories.length, 10);
-    assert.equal(config.decisionModels.length, 10);
-    assert.deepEqual(Object.keys(config).sort(), ["apiKeyConfigured", "categories", "decisionModels"]);
+    assert.equal(config.model.id, "@cf/cloudflare/clef-flash");
+    assert.deepEqual(Object.keys(config).sort(), ["apiConfigured", "categories", "model"]);
+
+    const modelTest = await fetch(`${baseUrl}/api/model/test`, { method: "POST" });
+    if (!config.apiConfigured) {
+      assert.equal(modelTest.status, 503);
+    }
 
     const invalidMessage = await fetch(`${baseUrl}/api/classify`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: "  ", model: "provider/model" }),
+      body: JSON.stringify({ message: "  " }),
     });
     assert.equal(invalidMessage.status, 400);
     assert.match((await invalidMessage.json()).error, /non-empty/);
 
-    const invalidModelTest = await fetch(`${baseUrl}/api/models/test`, {
+    const removedModelCatalog = await fetch(`${baseUrl}/api/models`);
+    assert.equal(removedModelCatalog.status, 404);
+
+    const invalidModelTest = await fetch(`${baseUrl}/api/classify`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ model: "" }),
+      body: JSON.stringify({ message: "Test message" }),
     });
-    assert.equal(invalidModelTest.status, 400);
+    if (!config.apiConfigured) {
+      assert.equal(invalidModelTest.status, 503);
+    }
 
     const emptyExport = await fetch(`${baseUrl}/api/export/pdf`, {
       method: "POST",
@@ -49,7 +59,7 @@ test("serves the interface, exposes safe setup state, and validates requests", a
         messages: [{
           text: "A question from the test",
           category: "Service question",
-          model: "provider/model",
+          model: "@cf/cloudflare/clef-flash",
           createdAt: "today",
         }],
       }),
