@@ -126,7 +126,7 @@ The classifier chooses exactly one category:
 - Spam and scams
 
 Downloads include all results in the current tab, regardless of the selected
-category folder:
+category folder: 
 
 - **PDF** — grouped by category, with the model and classification
   time.
