@@ -89,7 +89,7 @@ anywhere except Cloudflare when you explicitly classify it.
 
 The **Test response** button sends a known pricing question and reports the
 model's returned category, confidence, and latency. The tester calls the
-Cloudflare account REST endpoint for
+Cloudflare account REST endpoint for 
 `@cf/cloudflare/clef-flash`, passing the message as decision state and the
 inbox categories as the model's choice schema. No model catalog or third-party
 model router is used. The UI shows the returned label and the
