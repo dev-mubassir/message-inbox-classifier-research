@@ -86,7 +86,7 @@ anywhere except Cloudflare when you explicitly classify it.
    ```
 
 6. Open [http://127.0.0.1:3000](http://127.0.0.1:3000).
-
+ 
 The **Test response** button sends a known pricing question and reports the
 model's returned category, confidence, and latency. The tester calls the
 Cloudflare account REST endpoint for 
